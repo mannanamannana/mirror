@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <!-- PWA / native-like feel -->
+  <meta name="theme-color" content="#000000"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <link rel="icon" href="/icon-192.png" type="image/png"/> <!-- add your icons -->
+  <link rel="apple-touch-icon" href="/icon-192.png"/>
+
+  <title>Mirror • Camera</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      height:100dvh; background:#000; color:#eee;
+      font-family:system-ui, sans-serif; overflow:hidden;
+      display:flex; flex-direction:column;
+      touch-action:manipulation; /* better mobile touch */
+    }
+    #camera-container {
+      flex:1; position:relative; background:#0a0a0a; overflow:hidden;
+    }
+    #video {
+      width:100%; height:100%; object-fit:cover;
+      filter:blur(18px) brightness(0.45) contrast(0.9);
+      transform:scale(1.08);
+    }
+    #overlay {
+      position:absolute; inset:0; background:rgba(0,0,0,0.82);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:30px; backdrop-filter:blur(5px);
+    }
+    .logo {
+      font-size:5rem; font-weight:800; letter-spacing:-3px;
+      background:linear-gradient(90deg, #ddd, #fff, #ddd);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      margin-bottom:0.3rem; text-shadow:0 0 50px rgba(255,255,255,0.2);
+    }
+    .status {
+      font-size:1.45rem; font-weight:500; opacity:0.95; line-height:1.45;
+      max-width:340px; margin:16px 0 32px;
+    }
+    .pulse { display:inline-block; width:12px; height:12px; background:#ff3366;
+      border-radius:50%; margin-left:8px; animation:pulse 1.6s infinite; }
+    @keyframes pulse { 0%,100% {transform:scale(1); opacity:0.5;} 50% {transform:scale(2.2); opacity:1;} }
+    .hint { font-size:1rem; opacity:0.65; margin-top:50px; }
+    #bottom-bar {
+      height:100px; background:linear-gradient(to top,#000,transparent);
+      display:flex; align-items:center; justify-content:center; gap:80px;
+    }
+    .btn-fake { width:64px; height:64px; border-radius:50%; border:3px solid #444;
+      background:rgba(40,40,40,0.7); backdrop-filter:blur(8px); }
+    .btn-fake.center { border-color:#aaa; background:rgba(100,100,100,0.35); }
+    #error-msg {
+      position:absolute; inset:0; background:rgba(0,0,0,0.9);
+      display:none; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:40px; color:#ff9999;
+    }
+    #retry-btn {
+      margin-top:30px; padding:14px 32px; font-size:1.1rem; background:#333;
+      border:none; color:white; border-radius:30px; cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="camera-container">
+    <video id="video" autoplay playsinline muted></video>
+
+    <div id="overlay">
+      <div class="logo">Mirror</div>
+      <div class="status">
+        Mirror is super popular right now — <strong>thousands</strong> of people are live!<br>
+        Servers are at max capacity<span class="pulse"></span><br>
+        Please try again in a minute or two 🪞
+      </div>
+      <div class="hint">
+        We're scaling fast to give everyone the cleanest mirror experience possible.
+      </div>
+    </div>
+
+    <div id="error-msg">
+      <div class="logo" style="font-size:3.5rem;">Mirror</div>
+      <p style="font-size:1.3rem; margin:20px 0;">Couldn't start camera</p>
+      <p id="error-detail" style="opacity:0.8; max-width:320px;"></p>
+      <button id="retry-btn">Retry</button>
+    </div>
+  </div>
+
+  <div id="bottom-bar">
+    <div class="btn-fake"></div>
+    <div class="btn-fake center"></div>
+    <div class="btn-fake"></div>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const errorMsg = document.getElementById('error-msg');
+    const errorDetail = document.getElementById('error-detail');
+    const retryBtn = document.getElementById('retry-btn');
+
+    let stream = null;
+
+    async function startCamera() {
+      try {
+        // Hide error first
+        errorMsg.style.display = 'none';
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "user", // front camera by default
+            width: { ideal: 1280 },
+            height: { ideal: 1280 }
+          }
+        });
+
+        video.srcObject = stream;
+        // Here you can later decide to show/hide overlay based on backend status
+        // For now: let's pretend it's busy for demo → remove/comment next line when real
+        // overlay.style.display = 'flex'; // or fetch('/api/status') then decide
+
+      } catch (err) {
+        console.error("Camera error:", err);
+        errorDetail.textContent = getFriendlyError(err);
+        errorMsg.style.display = 'flex';
+      }
+    }
+
+    function getFriendlyError(err) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        return "Camera access was denied. Please enable it in your browser settings and try again.";
+      }
+      if (err.name === 'NotFoundError') {
+        return "No camera found on this device.";
+      }
+      if (err.name === 'NotReadableError') {
+        return "Camera is in use by another app. Close other camera apps and retry.";
+      }
+      return "Something went wrong starting the camera. Please try again.";
+    }
+
+    // Start on load
+    startCamera();
+
+    retryBtn.onclick = startCamera;
+
+    // Optional: stop camera when page hidden (battery + privacy)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
+      } else if (!stream) {
+        startCamera();
+      }
+    });
+
+    // Fake dynamic busy people count
+    setInterval(() => {
+      const count = Math.floor(Math.random() * 18000) + 4000;
+      document.querySelector('.status strong').textContent = count.toLocaleString();
+    }, 8000);
+  </script>
+</body>
+</html>
