@@ -3,66 +3,162 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <!-- PWA / native-like feel -->
+  <!-- PWA / mobile app-like feel -->
   <meta name="theme-color" content="#000000"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="mobile-web-app-capable" content="yes"/>
+  <!-- Replace with your real manifest & icons later -->
   <link rel="manifest" href="/manifest.json"/>
-  <link rel="icon" href="/icon-192.png" type="image/png"/> <!-- add your icons -->
+  <link rel="icon" href="/icon-192.png" type="image/png"/>
   <link rel="apple-touch-icon" href="/icon-192.png"/>
 
   <title>Mirror • Camera</title>
+
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      height:100dvh; background:#000; color:#eee;
-      font-family:system-ui, sans-serif; overflow:hidden;
-      display:flex; flex-direction:column;
-      touch-action:manipulation; /* better mobile touch */
+      height: 100dvh;
+      background: #000;
+      color: #eee;
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      touch-action: manipulation;
     }
+
     #camera-container {
-      flex:1; position:relative; background:#0a0a0a; overflow:hidden;
+      flex: 1;
+      position: relative;
+      background: #0a0a0a;
+      overflow: hidden;
     }
+
     #video {
-      width:100%; height:100%; object-fit:cover;
-      filter:blur(18px) brightness(0.45) contrast(0.9);
-      transform:scale(1.08);
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: blur(7px) brightness(0.65) contrast(0.95) saturate(0.75);
+      transform: scale(1.04);
+      transition: filter 0.6s ease;
     }
+
     #overlay {
-      position:absolute; inset:0; background:rgba(0,0,0,0.82);
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      text-align:center; padding:30px; backdrop-filter:blur(5px);
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.78);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px;
+      backdrop-filter: blur(4px);
     }
+
     .logo {
-      font-size:5rem; font-weight:800; letter-spacing:-3px;
-      background:linear-gradient(90deg, #ddd, #fff, #ddd);
-      -webkit-background-clip:text; background-clip:text; color:transparent;
-      margin-bottom:0.3rem; text-shadow:0 0 50px rgba(255,255,255,0.2);
+      font-size: 5.2rem;
+      font-weight: 800;
+      letter-spacing: -3px;
+      background: linear-gradient(90deg, #ddd, #fff, #ddd);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.4rem;
+      text-shadow: 0 0 50px rgba(255,255,255,0.18);
     }
+
     .status {
-      font-size:1.45rem; font-weight:500; opacity:0.95; line-height:1.45;
-      max-width:340px; margin:16px 0 32px;
+      font-size: 1.4rem;
+      font-weight: 500;
+      opacity: 0.94;
+      line-height: 1.45;
+      max-width: 360px;
+      margin: 16px 0 32px;
     }
-    .pulse { display:inline-block; width:12px; height:12px; background:#ff3366;
-      border-radius:50%; margin-left:8px; animation:pulse 1.6s infinite; }
-    @keyframes pulse { 0%,100% {transform:scale(1); opacity:0.5;} 50% {transform:scale(2.2); opacity:1;} }
-    .hint { font-size:1rem; opacity:0.65; margin-top:50px; }
+
+    #user-count {
+      transition: all 1.3s ease-out;
+    }
+
+    .pulse {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background: #ff3366;
+      border-radius: 50%;
+      margin-left: 8px;
+      animation: pulse 1.6s infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50%      { transform: scale(2.2); opacity: 1; }
+    }
+
+    .hint {
+      font-size: 1rem;
+      opacity: 0.65;
+      margin-top: 50px;
+    }
+
     #bottom-bar {
-      height:100px; background:linear-gradient(to top,#000,transparent);
-      display:flex; align-items:center; justify-content:center; gap:80px;
+      height: 100px;
+      background: linear-gradient(to top, #000, transparent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 80px;
     }
-    .btn-fake { width:64px; height:64px; border-radius:50%; border:3px solid #444;
-      background:rgba(40,40,40,0.7); backdrop-filter:blur(8px); }
-    .btn-fake.center { border-color:#aaa; background:rgba(100,100,100,0.35); }
+
+    .btn-fake {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 3px solid #444;
+      background: rgba(40,40,40,0.7);
+      backdrop-filter: blur(8px);
+    }
+
+    .btn-fake.center {
+      border-color: #aaa;
+      background: rgba(100,100,100,0.35);
+    }
+
     #error-msg {
-      position:absolute; inset:0; background:rgba(0,0,0,0.9);
-      display:none; flex-direction:column; align-items:center; justify-content:center;
-      text-align:center; padding:40px; color:#ff9999;
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+      color: #ff9999;
     }
+
     #retry-btn {
-      margin-top:30px; padding:14px 32px; font-size:1.1rem; background:#333;
-      border:none; color:white; border-radius:30px; cursor:pointer;
+      margin-top: 30px;
+      padding: 14px 36px;
+      font-size: 1.1rem;
+      background: #333;
+      border: none;
+      color: white;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #retry-btn:hover {
+      background: #555;
     }
   </style>
 </head>
@@ -74,9 +170,9 @@
     <div id="overlay">
       <div class="logo">Mirror</div>
       <div class="status">
-        Mirror is super popular right now — <strong>thousands</strong> of people are live!<br>
-        Servers are at max capacity<span class="pulse"></span><br>
-        Please try again in a minute or two 🪞
+        Mirror is really busy right now — <strong id="user-count">8,421</strong> people currently connected<br>
+        Please wait a moment<span class="pulse"></span><br>
+        We'll get you in as soon as a spot opens up 🪞
       </div>
       <div class="hint">
         We're scaling fast to give everyone the cleanest mirror experience possible.
@@ -84,9 +180,9 @@
     </div>
 
     <div id="error-msg">
-      <div class="logo" style="font-size:3.5rem;">Mirror</div>
-      <p style="font-size:1.3rem; margin:20px 0;">Couldn't start camera</p>
-      <p id="error-detail" style="opacity:0.8; max-width:320px;"></p>
+      <div class="logo" style="font-size: 3.8rem;">Mirror</div>
+      <p style="font-size: 1.3rem; margin: 20px 0;">Couldn't start camera</p>
+      <p id="error-detail" style="opacity: 0.8; max-width: 320px; line-height: 1.4;"></p>
       <button id="retry-btn">Retry</button>
     </div>
   </div>
@@ -103,26 +199,36 @@
     const errorMsg = document.getElementById('error-msg');
     const errorDetail = document.getElementById('error-detail');
     const retryBtn = document.getElementById('retry-btn');
+    const userCountEl = document.getElementById('user-count');
 
     let stream = null;
+    let currentUsers = Math.floor(Math.random() * 4000) + 7000; // 7000–11000 start
+
+    // Realistic slow user count fluctuation
+    function updateUserCount() {
+      const change = Math.floor(Math.random() * 140) - 70; // -70 to +70
+      currentUsers = Math.max(6200, Math.min(13800, currentUsers + change));
+      userCountEl.textContent = currentUsers.toLocaleString();
+    }
+
+    setInterval(updateUserCount, 7000 + Math.random() * 5000); // every ~7–12 seconds
+    updateUserCount(); // initial
 
     async function startCamera() {
       try {
-        // Hide error first
         errorMsg.style.display = 'none';
 
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: "user", // front camera by default
+            facingMode: "user",
             width: { ideal: 1280 },
             height: { ideal: 1280 }
           }
         });
 
         video.srcObject = stream;
-        // Here you can later decide to show/hide overlay based on backend status
-        // For now: let's pretend it's busy for demo → remove/comment next line when real
-        // overlay.style.display = 'flex'; // or fetch('/api/status') then decide
+        // For prototype: force busy state → later replace with real API logic
+        overlay.style.display = 'flex';
 
       } catch (err) {
         console.error("Camera error:", err);
@@ -133,15 +239,15 @@
 
     function getFriendlyError(err) {
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        return "Camera access was denied. Please enable it in your browser settings and try again.";
+        return "Camera access was denied.\nPlease enable camera permission in your browser settings and try again.";
       }
       if (err.name === 'NotFoundError') {
-        return "No camera found on this device.";
+        return "No front-facing camera found on this device.";
       }
       if (err.name === 'NotReadableError') {
-        return "Camera is in use by another app. Close other camera apps and retry.";
+        return "The camera is in use by another application.\nPlease close other camera apps and retry.";
       }
-      return "Something went wrong starting the camera. Please try again.";
+      return "Something went wrong while starting the camera.\nPlease try again or restart your browser.";
     }
 
     // Start on load
@@ -149,23 +255,18 @@
 
     retryBtn.onclick = startCamera;
 
-    // Optional: stop camera when page hidden (battery + privacy)
+    // Stop camera when page is hidden (saves battery/privacy)
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         if (stream) {
           stream.getTracks().forEach(track => track.stop());
           stream = null;
+          video.srcObject = null;
         }
-      } else if (!stream) {
+      } else if (!video.srcObject) {
         startCamera();
       }
     });
-
-    // Fake dynamic busy people count
-    setInterval(() => {
-      const count = Math.floor(Math.random() * 18000) + 4000;
-      document.querySelector('.status strong').textContent = count.toLocaleString();
-    }, 8000);
   </script>
 </body>
 </html>
