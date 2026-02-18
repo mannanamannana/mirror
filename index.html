@@ -1,272 +1,221 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <!-- PWA / mobile app-like feel -->
-  <meta name="theme-color" content="#000000"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="mobile-web-app-capable" content="yes"/>
-  <!-- Replace with your real manifest & icons later -->
-  <link rel="manifest" href="/manifest.json"/>
-  <link rel="icon" href="/icon-192.png" type="image/png"/>
-  <link rel="apple-touch-icon" href="/icon-192.png"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AR Hair Beast</title>
+<script src="https://unpkg.com/@vladmandic/face-api/dist/face-api.js"></script>
 
-  <title>Mirror • Camera</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+body{background:#000;color:#fff;overflow:hidden;display:flex;height:100vh}
+#container{position:relative;flex:1;display:flex;justify-content:center;align-items:center}
+video,canvas{position:absolute;width:100%;height:100%;object-fit:cover}
+#video{display:none}
 
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+/* Sidebar */
+#panel{
+position:absolute;
+right:0;
+top:0;
+width:300px;
+height:100%;
+background:#111;
+border-left:1px solid #222;
+transform:translateX(100%);
+transition:0.4s;
+padding:20px;
+overflow-y:auto;
+z-index:10;
+}
+#panel.open{transform:translateX(0)}
 
-    body {
-      height: 100dvh;
-      background: #000;
-      color: #eee;
-      font-family: system-ui, -apple-system, sans-serif;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      touch-action: manipulation;
-    }
+#toggle{
+position:absolute;
+right:15px;
+top:15px;
+background:#fff;
+color:#000;
+border:none;
+padding:8px 14px;
+cursor:pointer;
+z-index:11;
+}
 
-    #camera-container {
-      flex: 1;
-      position: relative;
-      background: #0a0a0a;
-      overflow: hidden;
-    }
+h2{margin-bottom:15px}
 
-    #video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      filter: blur(7px) brightness(0.65) contrast(0.95) saturate(0.75);
-      transform: scale(1.04);
-      transition: filter 0.6s ease;
-    }
+.hairstyle{
+display:flex;
+align-items:center;
+gap:10px;
+background:#1a1a1a;
+padding:10px;
+margin-bottom:10px;
+cursor:pointer;
+border:1px solid #222;
+transition:0.3s;
+}
+.hairstyle:hover{background:#333}
+.hairstyle img{width:60px}
 
-    #overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.78);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 30px;
-      backdrop-filter: blur(4px);
-    }
+.control-group{margin:15px 0}
+input[type=range]{width:100%}
+input[type=color]{width:100%;height:40px;border:none}
 
-    .logo {
-      font-size: 5.2rem;
-      font-weight: 800;
-      letter-spacing: -3px;
-      background: linear-gradient(90deg, #ddd, #fff, #ddd);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      margin-bottom: 0.4rem;
-      text-shadow: 0 0 50px rgba(255,255,255,0.18);
-    }
-
-    .status {
-      font-size: 1.4rem;
-      font-weight: 500;
-      opacity: 0.94;
-      line-height: 1.45;
-      max-width: 360px;
-      margin: 16px 0 32px;
-    }
-
-    #user-count {
-      transition: all 1.3s ease-out;
-    }
-
-    .pulse {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      background: #ff3366;
-      border-radius: 50%;
-      margin-left: 8px;
-      animation: pulse 1.6s infinite;
-      vertical-align: middle;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 0.5; }
-      50%      { transform: scale(2.2); opacity: 1; }
-    }
-
-    .hint {
-      font-size: 1rem;
-      opacity: 0.65;
-      margin-top: 50px;
-    }
-
-    #bottom-bar {
-      height: 100px;
-      background: linear-gradient(to top, #000, transparent);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 80px;
-    }
-
-    .btn-fake {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      border: 3px solid #444;
-      background: rgba(40,40,40,0.7);
-      backdrop-filter: blur(8px);
-    }
-
-    .btn-fake.center {
-      border-color: #aaa;
-      background: rgba(100,100,100,0.35);
-    }
-
-    #error-msg {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.9);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 40px;
-      color: #ff9999;
-    }
-
-    #retry-btn {
-      margin-top: 30px;
-      padding: 14px 36px;
-      font-size: 1.1rem;
-      background: #333;
-      border: none;
-      color: white;
-      border-radius: 30px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    #retry-btn:hover {
-      background: #555;
-    }
-  </style>
+#capture{
+width:100%;
+padding:10px;
+background:#fff;
+color:#000;
+border:none;
+cursor:pointer;
+margin-top:15px;
+}
+</style>
 </head>
+
 <body>
 
-  <div id="camera-container">
-    <video id="video" autoplay playsinline muted></video>
+<div id="container">
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
+</div>
 
-    <div id="overlay">
-      <div class="logo">Mirror</div>
-      <div class="status">
-        Mirror is really busy right now — <strong id="user-count">8,421</strong> people currently connected<br>
-        Please wait a moment<span class="pulse"></span><br>
-        We'll get you in as soon as a spot opens up 🪞
-      </div>
-      <div class="hint">
-        We're scaling fast to give everyone the cleanest mirror experience possible.
-      </div>
-    </div>
+<button id="toggle">MENU</button>
 
-    <div id="error-msg">
-      <div class="logo" style="font-size: 3.8rem;">Mirror</div>
-      <p style="font-size: 1.3rem; margin: 20px 0;">Couldn't start camera</p>
-      <p id="error-detail" style="opacity: 0.8; max-width: 320px; line-height: 1.4;"></p>
-      <button id="retry-btn">Retry</button>
-    </div>
-  </div>
+<div id="panel">
+<h2>Choose Style</h2>
 
-  <div id="bottom-bar">
-    <div class="btn-fake"></div>
-    <div class="btn-fake center"></div>
-    <div class="btn-fake"></div>
-  </div>
+<div class="hairstyle" data-url="https://i.imgur.com/8Km9tLL.png">
+<img src="https://i.imgur.com/8Km9tLL.png"> Braids
+</div>
 
-  <script>
-    const video = document.getElementById('video');
-    const overlay = document.getElementById('overlay');
-    const errorMsg = document.getElementById('error-msg');
-    const errorDetail = document.getElementById('error-detail');
-    const retryBtn = document.getElementById('retry-btn');
-    const userCountEl = document.getElementById('user-count');
+<div class="hairstyle" data-url="https://i.imgur.com/jNNT4LE.png">
+<img src="https://i.imgur.com/jNNT4LE.png"> Afro
+</div>
 
-    let stream = null;
-    let currentUsers = Math.floor(Math.random() * 4000) + 7000; // 7000–11000 start
+<div class="hairstyle" data-url="https://i.imgur.com/o5uMfKo.png">
+<img src="https://i.imgur.com/o5uMfKo.png"> Dreads
+</div>
 
-    // Realistic slow user count fluctuation
-    function updateUserCount() {
-      const change = Math.floor(Math.random() * 140) - 70; // -70 to +70
-      currentUsers = Math.max(6200, Math.min(13800, currentUsers + change));
-      userCountEl.textContent = currentUsers.toLocaleString();
-    }
+<h2>Adjust</h2>
 
-    setInterval(updateUserCount, 7000 + Math.random() * 5000); // every ~7–12 seconds
-    updateUserCount(); // initial
+<div class="control-group">
+<label>Color</label>
+<input type="color" id="colorPicker" value="#ffffff">
+</div>
 
-    async function startCamera() {
-      try {
-        errorMsg.style.display = 'none';
+<div class="control-group">
+<label>Opacity</label>
+<input type="range" id="opacity" min="0" max="1" step="0.01" value="1">
+</div>
 
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user",
-            width: { ideal: 1280 },
-            height: { ideal: 1280 }
-          }
-        });
+<button id="capture">Capture & Download</button>
 
-        video.srcObject = stream;
-        // For prototype: force busy state → later replace with real API logic
-        overlay.style.display = 'flex';
+</div>
 
-      } catch (err) {
-        console.error("Camera error:", err);
-        errorDetail.textContent = getFriendlyError(err);
-        errorMsg.style.display = 'flex';
-      }
-    }
+<script>
+const video=document.getElementById('video');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
 
-    function getFriendlyError(err) {
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        return "Camera access was denied.\nPlease enable camera permission in your browser settings and try again.";
-      }
-      if (err.name === 'NotFoundError') {
-        return "No front-facing camera found on this device.";
-      }
-      if (err.name === 'NotReadableError') {
-        return "The camera is in use by another application.\nPlease close other camera apps and retry.";
-      }
-      return "Something went wrong while starting the camera.\nPlease try again or restart your browser.";
-    }
+let hairImage=new Image();
+let currentHair=null;
+let lastDetection=null;
 
-    // Start on load
-    startCamera();
+let smooth={x:0,y:0,width:0,height:0,angle:0};
 
-    retryBtn.onclick = startCamera;
+document.getElementById('toggle').onclick=()=>{
+document.getElementById('panel').classList.toggle('open');
+};
 
-    // Stop camera when page is hidden (saves battery/privacy)
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          stream = null;
-          video.srcObject = null;
-        }
-      } else if (!video.srcObject) {
-        startCamera();
-      }
-    });
-  </script>
+document.querySelectorAll('.hairstyle').forEach(el=>{
+el.onclick=()=>{
+hairImage.src=el.dataset.url;
+currentHair=el.dataset.url;
+};
+});
+
+async function init(){
+
+await faceapi.nets.tinyFaceDetector.loadFromUri('https://unpkg.com/@vladmandic/face-api/model');
+await faceapi.nets.faceLandmark68Net.loadFromUri('https://unpkg.com/@vladmandic/face-api/model');
+
+const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}});
+video.srcObject=stream;
+
+video.onloadedmetadata=()=>{
+canvas.width=video.videoWidth;
+canvas.height=video.videoHeight;
+detect();
+render();
+};
+}
+
+async function detect(){
+lastDetection=await faceapi
+.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
+.withFaceLandmarks();
+setTimeout(detect,200);
+}
+
+function render(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.drawImage(video,0,0,canvas.width,canvas.height);
+
+if(lastDetection && hairImage.complete){
+
+const landmarks=lastDetection.landmarks;
+const jaw=landmarks.getJawOutline();
+const left=jaw[0];
+const right=jaw[16];
+
+const faceWidth=Math.hypot(right.x-left.x,right.y-left.y);
+const centerX=(left.x+right.x)/2;
+const brow=landmarks.getLeftEyeBrow()[2];
+
+const angle=Math.atan2(right.y-left.y,right.x-left.x);
+
+const target={
+x:centerX,
+y:brow.y,
+width:faceWidth*1.6,
+height:hairImage.height*(faceWidth*1.6/hairImage.width),
+angle:angle
+};
+
+// smoothing
+for(let key in target){
+smooth[key]+= (target[key]-smooth[key])*0.2;
+}
+
+ctx.save();
+ctx.translate(smooth.x,smooth.y - smooth.height*0.6);
+ctx.rotate(smooth.angle);
+ctx.globalAlpha=document.getElementById('opacity').value;
+
+// color tint
+ctx.drawImage(hairImage,-smooth.width/2,-smooth.height/2,smooth.width,smooth.height);
+ctx.globalCompositeOperation="source-atop";
+ctx.fillStyle=document.getElementById('colorPicker').value;
+ctx.fillRect(-smooth.width/2,-smooth.height/2,smooth.width,smooth.height);
+ctx.globalCompositeOperation="source-over";
+
+ctx.restore();
+}
+
+requestAnimationFrame(render);
+}
+
+document.getElementById('capture').onclick=()=>{
+const link=document.createElement('a');
+link.download="ar-hair.png";
+link.href=canvas.toDataURL();
+link.click();
+};
+
+init();
+</script>
+
 </body>
 </html>
